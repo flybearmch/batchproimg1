@@ -98,8 +98,16 @@ double GetDiameter(point A,point B,point C,point D)
 	area2=GetTriangleArea(area1,GetDistance(B,D),GetDistance(D,C));//BCD
 	area1=2*area2/area1;//用三角形BCD算出的线径2
 	result=(result+area1)/2;//对计算得到的两个线径值做加权平均
-	return area1;
+	return result;
 }
+//全局变量
+SYSTEMTIME st;
+int mtime1;
+int mtime2;
+int mmtime1;
+int mmtime2;
+//SYSTEMTIME dst;
+//
 //==============================================================================
 //  Main Function
 //==============================================================================
@@ -119,10 +127,18 @@ int main (int argc, char *argv[])
     imaqSetWindowThreadPolicy(IMAQ_SEPARATE_THREAD);
 	//外层一个循环，用于更新imagePath
 	CFileFind finder;
-	BOOL bWorking = finder.FindFile(_T("c:\\imagestore1\\*.jpg"));
+	BOOL bWorking = finder.FindFile(_T("c:\\imagestorep\\*.jpg"));
 	int count=0;//use in debug
 	int count1=0;
 	int count2=0;
+	int count3=0;
+	imageType=IMAQ_IMAGE_U8;
+	image = imaqCreateImage(imageType, 7);
+	IVA_Data *ivaData;
+	ivaData = IVA_InitData(9, 0);
+	GetSystemTime(&st);
+	mtime1=st.wSecond;
+	mmtime1=st.wMilliseconds;
 	while(bWorking)
 	{
 		bWorking = finder.FindNextFile();
@@ -135,25 +151,25 @@ int main (int argc, char *argv[])
 
     
         // Get the type of the image file to create an image of the right type
-        imaqGetFileInfo((LPCTSTR)temp, NULL, NULL, NULL, NULL, NULL, &imageType);//imagePath[0]
+        //imaqGetFileInfo((LPCTSTR)temp, NULL, NULL, NULL, NULL, NULL, &imageType);//imagePath[0]
 
         // Create an IMAQ Vision image
-        image = imaqCreateImage(imageType, 7);
+        //image = imaqCreateImage(imageType, 7);
 
         // Read the image from disk
         imaqReadFile(image, (LPCTSTR)temp, NULL, NULL);//imagePath[0]
 
         // Vision Assistant Algorithm
-		IVA_Data *ivaData;
-		ivaData = IVA_InitData(9, 0);
+		//IVA_Data *ivaData;
+		//ivaData = IVA_InitData(9, 0);
         success = IVA_ProcessImage(image,ivaData);
         if (!success)
             err = imaqGetLastError();
 		//在这里处理结果
-		int temp1=int(ivaData->stepResults[4].results[0].resultVal.numVal);
+		int temp1=int(ivaData->stepResults[4].results[0].resultVal.numVal);//这什么玩意 没注释害死人 这是有无黑斑的检测值
 
 		//
-		point A,B,C,D;
+		point A,B,C,D;//直线的四个端点
 		A.x=ivaData->stepResults[8].results[0].resultVal.numVal;
 		A.y=ivaData->stepResults[8].results[1].resultVal.numVal;
 		B.x=ivaData->stepResults[7].results[0].resultVal.numVal;
@@ -166,10 +182,10 @@ int main (int argc, char *argv[])
 		angle1=ivaData->stepResults[7].results[4].resultVal.numVal;
 		angle2=ivaData->stepResults[8].results[4].resultVal.numVal;
 		diameter=GetDiameter(A,B,C,D);
-		if (diameter<25 && diameter>10)
-		{
-			diameter=diameter;
-		}
+		//if (diameter<25 && diameter>10)
+		//{
+		//	diameter=diameter;
+		//}
 		filetemp[count].x=diameter;
 		filetemp[count].y=angle2;
 		filetemp[count].z=angle1;
@@ -211,7 +227,7 @@ int main (int argc, char *argv[])
 				//表面有一层毛，影响检测，两个边沿不近似平行
 			}
 		}
-		IVA_DisposeData(ivaData);
+		//IVA_DisposeData(ivaData);
         // Display the image
         //imaqMoveWindow(DISPLAY_WINDOW, imaqMakePoint(0,0));
         //imaqSetWindowPalette(DISPLAY_WINDOW, IMAQ_PALETTE_BINARY, NULL, 0);
@@ -221,11 +237,23 @@ int main (int argc, char *argv[])
         
 
         // Dispose resources
-        imaqDispose(image);
+        //imaqDispose(image);
 		//2012-12-8mch
 		count++;
-		cout <<count<<endl;
+		//cout <<count<<endl;
+		if (!bWorking && count3<9)
+		{
+			bWorking = finder.FindFile(_T("c:\\imagestorep\\*.jpg"));
+			count3++;
+		}
 	}
+	GetSystemTime(&st);
+	mtime2=st.wSecond;
+	mmtime2=st.wMilliseconds;
+	cout<<"stime= "<<mtime2-mtime1<<endl;
+	cout<<"milltime= "<<mmtime2-mmtime1<<endl;
+	IVA_DisposeData(ivaData);
+	imaqDispose(image);
 	cout<<"result=";
 	cout<<count1<<endl;
 	cout<<"result2=";
@@ -234,13 +262,13 @@ int main (int argc, char *argv[])
 
 	//文件操作
 
-	std::ofstream file("d:\\try.txt",ios::out|ios::app);
+	std::ofstream file("d:\\try.txt",ios::out|ios::trunc);
 	if(!file)
 	{
 		std::cout<<"不可以打开文件"<<std::endl;
 		exit(1);
 	}
-	for (int k=0;k<7117;k++)
+	for (int k=0;k<103;k++)
 	{
 		file<<filetemp[k].x<<" "<<filetemp[k].y<<" "<<filetemp[k].z<<endl;
 	}
